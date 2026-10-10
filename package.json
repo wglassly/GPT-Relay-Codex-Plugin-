@@ -1,0 +1,12 @@
+{
+  "name": "gpt-relay-cli-prototype",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "relay": "node plugins/gpt-relay/scripts/cli.mjs",
+    "test": "node --test plugins/gpt-relay/scripts/*.test.mjs"
+  },
+  "dependencies": { "playwright": "1.64.0" }
+}

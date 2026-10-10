@@ -5,3 +5,5 @@ dist/
 tmp/
 relay_uploads/
 *.local.*
+.relay-endpoint.json
+DevToolsActivePort

@@ -303,6 +303,7 @@ async function relayPrompt(options = {}) {
     thinkingEffort,
     proEffort,
     effort,
+    inferIntelligenceFromPrompt = true,
     appName,
     feature,
     projectName,
@@ -317,7 +318,7 @@ async function relayPrompt(options = {}) {
 
   const browser = await resolveBrowser(requestedBrowser);
   const intelligenceRequest = resolveIntelligenceRequest({
-    prompt,
+    prompt: inferIntelligenceFromPrompt ? prompt : "",
     model: requestedModel,
     mode: intelligenceMode ?? reasoningMode ?? thinkingMode ?? requestedMode,
     effort: reasoningEffort ?? thinkingEffort ?? proEffort ?? effort,
@@ -2691,8 +2692,8 @@ async function readChatState(tab) {
     function isAnsweringButtonLabel(label) {
       const normalized = label.trim().replace(/\s+/g, " ");
       return (
-        /stop/i.test(normalized) &&
-        /(answer|generat|respond|stream|thinking)/i.test(normalized)
+        (/stop/i.test(normalized) && /(answer|generat|respond|stream|thinking)/i.test(normalized)) ||
+        /^(停止|停止生成|停止回答|停止响应|停止思考)$/.test(normalized)
       );
     }
 
@@ -2970,8 +2971,13 @@ async function readChatState(tab) {
         : serializeInlineMarkdown(node).trim();
     }
 
+    function messageRole(el) {
+      return el.getAttribute("data-message-author-role") ||
+        (el.getAttribute("data-markdown-text-style") === "assistant-message" ? "assistant" : "user");
+    }
+
     function messageTextFromElement(el) {
-      const role = el.getAttribute("data-message-author-role");
+      const role = messageRole(el);
       if (role !== "assistant") {
         return (el.innerText || el.textContent || "")
           .trim()
@@ -2985,11 +2991,13 @@ async function readChatState(tab) {
       return markdown || plain;
     }
 
-    const messages = Array.from(
-      document.querySelectorAll("[data-message-author-role]")
-    ).map((el, index) => ({
+    const legacyMessages = document.querySelectorAll("[data-message-author-role]");
+    const messageElements = legacyMessages.length ? legacyMessages : document.querySelectorAll(
+      '[data-markdown-text-style="assistant-message"], [data-markdown-text-style="user-message"]'
+    );
+    const messages = Array.from(messageElements).filter(isVisibleElement).map((el, index) => ({
       index,
-      role: el.getAttribute("data-message-author-role"),
+      role: messageRole(el),
       text: messageTextFromElement(el),
     }));
 
@@ -3010,18 +3018,18 @@ async function readChatState(tab) {
           button.textContent ||
           ""
         ).trim();
-        return isAnsweringButtonLabel(label);
+        return isVisibleElement(button) && (isAnsweringButtonLabel(label) || button.getAttribute("data-testid") === "stop-button");
       }
     );
 
     const hasBusyMessage = Boolean(
       document.querySelector(
-        "[data-message-author-role='assistant'][aria-busy='true'], [data-message-author-role='assistant'] [aria-busy='true']"
+        "[data-message-author-role='assistant'][aria-busy='true'], [data-message-author-role='assistant'] [aria-busy='true'], [data-markdown-text-style='assistant-message'][aria-busy='true'], [data-markdown-text-style='assistant-message'] [aria-busy='true']"
       )
     );
 
     const responseActionsAvailable = buttonLabels.some((label) =>
-      /\b(copy response|more actions)\b/i.test(label)
+      /\b(copy response|more actions)\b/i.test(label) || /^(复制|更多操作)$/.test(label)
     );
 
     function textOf(element) {
@@ -3041,7 +3049,7 @@ async function readChatState(tab) {
       return width >= minImageEdge && height >= minImageEdge && width * height >= minImageArea;
     }
 
-    const main = document.querySelector("main");
+    const main = Array.from(document.querySelectorAll("main")).filter(isVisibleElement).at(-1);
     const root = main || document.body;
     const pageText = textOf(root)
       .replace(/\n{3,}/g, "\n\n")

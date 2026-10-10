@@ -2,6 +2,21 @@
 
 [中文说明](./README.zh-Hant.md) | [English details](./README.en.md)
 
+## Experimental standalone CLI (this fork)
+
+This fork adds a text-only CLI that connects to a dedicated local Chrome instance through Playwright/CDP. It reuses the upstream relay's submission, polling, session storage, and Markdown extraction, without requiring the desktop app's `browser-client` runtime.
+
+Requires Node.js 22+ and Google Chrome:
+
+```bash
+npm ci
+npm run relay -- login
+# Sign in manually in the dedicated Chrome window and leave it open.
+npm run relay -- ask "Reply with exactly RELAY_OK"
+```
+
+See [CLI usage and limitations](./plugins/gpt-relay/docs/cli.md). The remaining sections describe the original desktop plugin.
+
 GPT Relay is a Codex plugin that relays prompts from Codex to ChatGPT through your existing Chrome session, then returns the completed ChatGPT response, generated images, Deep Research reports, and conversation links back to Codex.
 
 It is designed for users who want Codex to ask ChatGPT with visible ChatGPT Intelligence options such as GPT 5.5 Pro Extended, GPT 5.4 Thinking Light, Deep Research, web search, image generation, and file uploads.
